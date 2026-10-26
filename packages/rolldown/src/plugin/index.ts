@@ -161,7 +161,15 @@ export interface PartialResolvedId
    * - If `'absolute'`, absolute ids will always be kept as absolute ids.
    */
   external?: boolean | 'absolute' | 'relative';
+  /** The resolved id, without import attributes. */
   id: string;
+  /**
+   * Replaces the import attributes of the import. `{}` removes them. If omitted, the import
+   * keeps the attributes written in the source.
+   *
+   * For an external module, they become the `with` clause of the import in the output.
+   */
+  attributes?: Record<string, string>;
 }
 
 /** @category Plugin APIs */
@@ -245,6 +253,17 @@ export interface ResolveIdExtraOptions {
    * - `hot-accept`: `import.meta.hot.accept('./lib.js', () => {})` (experimental)
    */
   kind: BindingHookResolveIdExtraArgs['kind'];
+  /**
+   * The import attributes of the import being resolved, e.g. `{ type: 'json' }` for
+   * `import data from './data.json' with { type: 'json' }`. `{}` means none.
+   */
+  attributes: Record<string, string>;
+  /**
+   * The `importer` without its import attributes. Use it to read or compare the importing file.
+   */
+  importerRawId: string | undefined;
+  /** The import attributes the importer itself was imported with. `{}` means none. */
+  importerAttributes: Record<string, string>;
 }
 
 /** @inline @category Plugin APIs */
@@ -414,6 +433,10 @@ export interface FunctionPluginHooks {
      * This will be `undefined` when {@linkcode PluginContext.resolve | this.resolve(source, undefined, { kind: 'dynamic-import' })} is called.
      */
     importer: string | undefined,
+    extraOptions: Pick<
+      ResolveIdExtraOptions,
+      'attributes' | 'importerRawId' | 'importerAttributes'
+    >,
   ) => ResolveIdResult;
 
   /**
