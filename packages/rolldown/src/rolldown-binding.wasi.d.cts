@@ -2011,6 +2011,7 @@ export interface BindingChecksOptions {
   sourcemapBroken?: boolean
   namespaceConflict?: boolean
   shimmedExport?: boolean
+  invalidImportAttribute?: boolean
 }
 
 export interface BindingChunkImportMap {
@@ -2297,6 +2298,7 @@ export interface BindingExperimentalOptions {
   nativeMagicString?: boolean
   chunkOptimization?: boolean | BindingChunkOptimizationOptions
   lazyBarrel?: boolean
+  importAttributes?: boolean
 }
 
 export interface BindingFilterToken {
