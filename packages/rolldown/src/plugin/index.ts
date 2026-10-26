@@ -500,6 +500,10 @@ export interface FunctionPluginHooks {
       moduleType: ModuleType;
       magicString?: RolldownMagicString;
       ast?: Program;
+      /** The module id without import attributes. */
+      rawId: string;
+      /** The import attributes the module was imported with. `{}` means none. */
+      attributes: Record<string, string>;
     },
   ) => TransformResult;
 
