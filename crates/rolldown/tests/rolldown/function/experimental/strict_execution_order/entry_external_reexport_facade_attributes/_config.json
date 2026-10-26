@@ -1,4 +1,5 @@
 {
+  "_comment": "The entry re-exports the same external with and without attributes. Without `experimental.importAttributes` they are one external module and the first attributes win, so the option is on.",
   "expectExecuted": false,
   "configName": "on-demand",
   "config": {
@@ -13,7 +14,8 @@
       ]
     },
     "experimental": {
-      "onDemandWrapping": true
+      "onDemandWrapping": true,
+      "importAttributes": true
     }
   },
   "configVariants": [

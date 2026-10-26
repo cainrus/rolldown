@@ -1,6 +1,9 @@
 {
-  "_comment": "`data-a` is a JSON module, which Node loads only with `type: 'json'`. A bare import of an external used to lose its `with` clause.",
+  "_comment": "`data-a` is a JSON module, which Node loads only with `type: 'json'`. With `experimental.importAttributes`, a bare import of an external keeps its `with` clause.",
   "config": {
-    "external": ["data-a"]
+    "external": ["data-a"],
+    "experimental": {
+      "importAttributes": true
+    }
   }
 }

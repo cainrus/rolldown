@@ -8,7 +8,8 @@ use rolldown_common::{
   NormalizedBundlerOptions, RUNTIME_MODULE_KEY, RawImportRecord, ResolvedId,
 };
 use rolldown_error::{
-  BuildDiagnostic, BuildResult, DiagnosableArcstr, DiagnosticOptions, EventKind,
+  BuildDiagnostic, BuildResult, DiagnosableArcstr, DiagnosticOptions, EventKind, EventKindSwitcher,
+  InvalidImportAttributeKind,
 };
 use rolldown_fs::FileSystem;
 use rolldown_plugin::{__inner::resolve_id_check_external, PluginDriver, SharedPluginDriver};
@@ -100,6 +101,9 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
   for (dep, resolved_id) in dependencies.iter().zip(resolved_results) {
     match resolved_id {
       Ok(info) => {
+        if info.external.is_external() {
+          warn_dropped_attributes(options, self_resolved_id, dep, &source, warnings);
+        }
         ret.push(info.clone());
       }
       Err(e) => {
@@ -141,6 +145,7 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
                 );
               }
             }
+            warn_dropped_attributes(options, self_resolved_id, dep, &source, warnings);
             ret.push(
               ResolvedId {
                 id: ModuleId::new(specifier.as_str()),
@@ -188,4 +193,31 @@ fn diagnosable_importee(dep: &RawImportRecord) -> DiagnosableArcstr {
   } else {
     DiagnosableArcstr::Span { span: dep.state.span, text }
   }
+}
+
+/// Without `experimental.importAttributes`, the `with` clause of a static import of an external
+/// never reaches the output. The options of `import()` are left as written, so they do not warn.
+fn warn_dropped_attributes(
+  options: &SharedOptions,
+  importer: &ResolvedId,
+  dep: &RawImportRecord,
+  source: &ArcStr,
+  warnings: &mut Vec<BuildDiagnostic>,
+) {
+  if dep.kind != ImportKind::Import
+    || dep.attributes.is_empty()
+    || options.experimental.is_import_attributes_enabled()
+    || !options.checks.contains(EventKindSwitcher::InvalidImportAttribute)
+  {
+    return;
+  }
+  warnings.push(
+    BuildDiagnostic::invalid_import_attribute(
+      importer.id.to_string(),
+      source.clone(),
+      dep.importer_span,
+      InvalidImportAttributeKind::ExternalWithoutOption,
+    )
+    .with_severity_warning(),
+  );
 }
