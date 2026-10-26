@@ -276,7 +276,8 @@ export function bindingifyLoad(
   args: BindingifyPluginArgs,
 ): PluginHookWithBindingExt<BindingPluginOptions['load'], BindingHookFilter | undefined> {
   return bindingifyHook(args.plugin.load, ({ handler, options }) => ({
-    plugin: async (ctx, id) => {
+    plugin: async (ctx, id, bindingExtraOptions) => {
+      const extraOptions = bindingExtraOptions ?? { rawId: id, attributes: {} };
       const ret = await handler.call(
         new LoadPluginContextImpl(
           args.outputOptions,
@@ -290,6 +291,7 @@ export function bindingifyLoad(
           args.watchMode,
         ),
         id,
+        extraOptions,
       );
 
       if (ret == null) {
@@ -306,7 +308,7 @@ export function bindingifyLoad(
         invalidate: false,
       });
 
-      let map = preProcessSourceMap(ret, id);
+      let map = preProcessSourceMap(ret, extraOptions.rawId);
 
       return {
         code: ret.code,
