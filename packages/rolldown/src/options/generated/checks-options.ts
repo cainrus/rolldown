@@ -215,7 +215,7 @@ export interface ChecksOptions {
   shimmedExport?: boolean;
 
   /**
-   * Whether to emit warnings when import attributes are ignored, such as the legacy `assert` keyword.
+   * Whether to emit warnings when import attributes are ignored: the legacy `assert` keyword and, with `experimental.importAttributes`, dynamic import options that are not statically analyzable.
    * @default true
    * */
   invalidImportAttribute?: boolean;

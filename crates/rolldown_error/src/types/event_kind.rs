@@ -139,7 +139,7 @@ pub enum EventKind {
   NamespaceConflict = 50,
   /// Whether to emit warnings when a missing export is replaced with an undefined binding.
   ShimmedExport = 51,
-  /// Whether to emit warnings when import attributes are ignored, such as the legacy `assert` keyword.
+  /// Whether to emit warnings when import attributes are ignored: the legacy `assert` keyword and, with `experimental.importAttributes`, dynamic import options that are not statically analyzable.
   InvalidImportAttribute = 52,
 }
 

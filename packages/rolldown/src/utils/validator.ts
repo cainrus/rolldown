@@ -456,7 +456,7 @@ const ChecksOptionsSchema = v.strictObject({
   invalidImportAttribute: v.pipe(
     v.optional(v.boolean()),
     v.description(
-      'Whether to emit warnings when import attributes are ignored, such as the legacy `assert` keyword',
+      'Whether to emit warnings when import attributes are ignored: the legacy `assert` keyword and, with `experimental.importAttributes`, dynamic import options that are not statically analyzable',
     ),
   ),
 });
