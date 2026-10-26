@@ -453,6 +453,12 @@ const ChecksOptionsSchema = v.strictObject({
       'Whether to emit warnings when a missing export is replaced with an undefined binding',
     ),
   ),
+  invalidImportAttribute: v.pipe(
+    v.optional(v.boolean()),
+    v.description(
+      'Whether to emit warnings when import attributes are ignored: the legacy `assert` keyword, the attributes of an external import while `experimental.importAttributes` is off, and, with the option on, dynamic import options that are not statically analyzable',
+    ),
+  ),
 });
 isTypeTrue<IsSchemaSubType<typeof ChecksOptionsSchema, ChecksOptions>>();
 
@@ -707,6 +713,7 @@ const InputOptionsSchema = v.strictObject({
         ]),
       ),
       lazyBarrel: v.optional(v.boolean()),
+      importAttributes: v.optional(v.boolean()),
     }),
   ),
   transform: v.optional(TransformOptionsSchema),

@@ -1,0 +1,43 @@
+---
+source: crates/rolldown_testing/src/integration_test.rs
+---
+# warnings
+
+## INVALID_IMPORT_ATTRIBUTE
+
+```text
+[INVALID_IMPORT_ATTRIBUTE] The import attributes of an external import in "main.js" are dropped, because `experimental.importAttributes` is off. Enable it to keep them in the output.
+   ╭─[ main.js:3:1 ]
+   │
+ 3 │ export * from 'ext' with { type: 'json' };
+   │ ─────────────────────┬────────────────────  
+   │                      ╰────────────────────── dropped without `experimental.importAttributes`
+───╯
+
+```
+
+## INVALID_IMPORT_ATTRIBUTE
+
+```text
+[INVALID_IMPORT_ATTRIBUTE] The import attributes of an external import in "main.js" are dropped, because `experimental.importAttributes` is off. Enable it to keep them in the output.
+   ╭─[ main.js:5:1 ]
+   │
+ 5 │ export { data };
+   │ ────────┬───────  
+   │         ╰───────── dropped without `experimental.importAttributes`
+───╯
+
+```
+
+# Assets
+
+## main.js
+
+```js
+import data from "ext";
+export * from "ext";
+// main.js
+const lazy = () => import("ext", { with: { type: "json" } });
+export { data, lazy };
+
+```

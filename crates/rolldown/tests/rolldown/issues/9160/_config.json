@@ -1,6 +1,9 @@
 {
   "config": {
-    "external": ["ext-json"]
+    "external": ["ext-json"],
+    "experimental": {
+      "importAttributes": true
+    }
   },
   "expectExecuted": false
 }

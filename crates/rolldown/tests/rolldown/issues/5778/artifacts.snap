@@ -1,13 +1,41 @@
 ---
 source: crates/rolldown_testing/src/integration_test.rs
 ---
+# warnings
+
+## INVALID_IMPORT_ATTRIBUTE
+
+```text
+[INVALID_IMPORT_ATTRIBUTE] The import attributes of an external import in "main.js" are dropped, because `experimental.importAttributes` is off. Enable it to keep them in the output.
+   ╭─[ main.js:1:1 ]
+   │
+ 1 │ import a, { b, c, d } from '@meojs/cfgs/package.json' with { type: 'json', foo: 'bar', tag: 'baz' };
+   │ ──────────────────────────────────────────────────┬─────────────────────────────────────────────────  
+   │                                                   ╰─────────────────────────────────────────────────── dropped without `experimental.importAttributes`
+───╯
+
+```
+
+## INVALID_IMPORT_ATTRIBUTE
+
+```text
+[INVALID_IMPORT_ATTRIBUTE] The import attributes of an external import in "main.js" are dropped, because `experimental.importAttributes` is off. Enable it to keep them in the output.
+   ╭─[ main.js:2:1 ]
+   │
+ 2 │ import foo from 'foo' with { type: 'foo' };
+   │ ─────────────────────┬─────────────────────  
+   │                      ╰─────────────────────── dropped without `experimental.importAttributes`
+───╯
+
+```
+
 # Assets
 
 ## main.js
 
 ```js
-import a, { b, c, d } from "@meojs/cfgs/package.json" with { type: "json", foo: "bar", tag: "baz" };
-import "foo" with { type: "foo" };
+import a, { b, c, d } from "@meojs/cfgs/package.json";
+import "foo";
 // main.js
 console.log(`cfgsPackageJson: `, a, b, c, d);
 

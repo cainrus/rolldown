@@ -4,11 +4,12 @@ use arcstr::ArcStr;
 use futures::future::join_all;
 use oxc_index::{IndexVec, index_vec};
 use rolldown_common::{
-  ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleDefFormat, ModuleId,
+  ImportAttributes, ImportKind, ImportRecordIdx, ImportRecordMeta, ModuleDefFormat, ModuleId,
   NormalizedBundlerOptions, RUNTIME_MODULE_KEY, RawImportRecord, ResolvedId,
 };
 use rolldown_error::{
-  BuildDiagnostic, BuildResult, DiagnosableArcstr, DiagnosticOptions, EventKind,
+  BuildDiagnostic, BuildResult, DiagnosableArcstr, DiagnosticOptions, EventKind, EventKindSwitcher,
+  InvalidImportAttributeKind,
 };
 use rolldown_fs::FileSystem;
 use rolldown_plugin::{__inner::resolve_id_check_external, PluginDriver, SharedPluginDriver};
@@ -23,9 +24,10 @@ pub async fn resolve_id<Fs: FileSystem>(
   bundle_options: &NormalizedBundlerOptions,
   resolver: &Resolver<Fs>,
   plugin_driver: &PluginDriver,
-  importer: &str,
+  importer: &ResolvedId,
   specifier: &str,
   kind: ImportKind,
+  attributes: &ImportAttributes,
 ) -> anyhow::Result<Result<ResolvedId, ResolveError>> {
   // Check runtime module
   if specifier == RUNTIME_MODULE_KEY {
@@ -40,13 +42,16 @@ pub async fn resolve_id<Fs: FileSystem>(
     resolver,
     plugin_driver,
     specifier,
-    Some(importer),
+    Some(&importer.id),
     false,
     kind,
     None,
     Arc::default(),
     false,
     bundle_options,
+    attributes,
+    Some(importer.id.raw_id()),
+    &importer.attributes,
   )
   .await
 }
@@ -60,19 +65,26 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
   source: ArcStr,
   warnings: &mut Vec<BuildDiagnostic>,
 ) -> BuildResult<IndexVec<ImportRecordIdx, ResolvedId>> {
-  // NOTE: this dedupes the identical (specifier, kind) resolve calls
-  let dedup_map: FxHashMap<(&str, ImportKind), ImportRecordIdx> = dependencies
+  // NOTE: this dedupes the identical (specifier, kind, attributes) resolve calls
+  let dedup_map: FxHashMap<(&str, ImportKind, &ImportAttributes), ImportRecordIdx> = dependencies
     .iter_enumerated()
-    .map(|(idx, item)| ((item.module_request.as_str(), item.kind), idx))
+    .map(|(idx, item)| ((item.module_request.as_str(), item.kind, &item.attributes), idx))
     .collect();
 
   let jobs = dedup_map.values().map(|&idx| async move {
     let item = &dependencies[idx];
-    let importer = &self_resolved_id.id;
     let specifier = &item.module_request;
-    resolve_id(options, resolver, plugin_driver, importer, specifier, item.kind)
-      .await
-      .map(|id| (idx, id))
+    resolve_id(
+      options,
+      resolver,
+      plugin_driver,
+      self_resolved_id,
+      specifier,
+      item.kind,
+      &item.attributes,
+    )
+    .await
+    .map(|id| (idx, id))
   });
   let mut sparse_results: IndexVec<ImportRecordIdx, Option<Result<ResolvedId, ResolveError>>> =
     index_vec![None; dependencies.len()];
@@ -81,7 +93,7 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
     sparse_results[idx] = Some(resolved);
   }
   let resolved_results = dependencies.iter().map(|dep| {
-    let repr_idx = dedup_map[&(dep.module_request.as_str(), dep.kind)];
+    let repr_idx = dedup_map[&(dep.module_request.as_str(), dep.kind, &dep.attributes)];
     sparse_results[repr_idx].as_ref().expect("dedup representative should be resolved")
   });
 
@@ -90,6 +102,9 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
   for (dep, resolved_id) in dependencies.iter().zip(resolved_results) {
     match resolved_id {
       Ok(info) => {
+        if info.external.is_external() {
+          warn_dropped_attributes(options, self_resolved_id, dep, &source, warnings);
+        }
         ret.push(info.clone());
       }
       Err(e) => {
@@ -131,11 +146,16 @@ pub async fn resolve_dependencies<Fs: FileSystem>(
                 );
               }
             }
-            ret.push(ResolvedId {
-              id: ModuleId::new(specifier.as_str()),
-              external: true.into(),
-              ..Default::default()
-            });
+            warn_dropped_attributes(options, self_resolved_id, dep, &source, warnings);
+            ret.push(
+              ResolvedId {
+                id: ModuleId::new(specifier.as_str()),
+                external: true.into(),
+                attributes: dep.attributes.clone(),
+                ..Default::default()
+              }
+              .finalize_attributes(options.experimental.is_import_attributes_enabled()),
+            );
           }
           ResolveError::MatchedAliasNotFound(..) => {
             build_errors.push(BuildDiagnostic::resolve_error(
@@ -174,4 +194,31 @@ fn diagnosable_importee(dep: &RawImportRecord) -> DiagnosableArcstr {
   } else {
     DiagnosableArcstr::Span { span: dep.state.span, text }
   }
+}
+
+/// Without `experimental.importAttributes`, the `with` clause of a static import of an external
+/// never reaches the output. The options of `import()` are left as written, so they do not warn.
+fn warn_dropped_attributes(
+  options: &SharedOptions,
+  importer: &ResolvedId,
+  dep: &RawImportRecord,
+  source: &ArcStr,
+  warnings: &mut Vec<BuildDiagnostic>,
+) {
+  if dep.kind != ImportKind::Import
+    || dep.attributes.is_empty()
+    || options.experimental.is_import_attributes_enabled()
+    || !options.checks.contains(EventKindSwitcher::InvalidImportAttribute)
+  {
+    return;
+  }
+  warnings.push(
+    BuildDiagnostic::invalid_import_attribute(
+      importer.id.to_string(),
+      source.clone(),
+      dep.importer_span,
+      InvalidImportAttributeKind::ExternalWithoutOption,
+    )
+    .with_severity_warning(),
+  );
 }

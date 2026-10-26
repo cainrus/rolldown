@@ -1,0 +1,7 @@
+{
+  "_comment": "Without `experimental.importAttributes`, the import attributes of a static import of an external are dropped from the output and warn. The options of `import()` are left as written.",
+  "config": {
+    "external": ["ext"]
+  },
+  "expectExecuted": false
+}
