@@ -113,6 +113,7 @@ impl Plugin for LazyCompilationPlugin {
             is_entry: false,
             skip_self: true,
             custom: std::sync::Arc::<rolldown_plugin::CustomField>::clone(&args.custom),
+            attributes: args.attributes.clone(),
           }),
         )
         .await??;
